@@ -1,14 +1,32 @@
-var index = require("./index");
 const Jimp = require("jimp");
+const AWS = require("aws-sdk");
 exports.getBlurry = async function (req, res) {
-  try {
-    const image = await Jimp.read("insert image url here");
-    const blurImage = image.blur(20).write("./blur.jpg");
-    console.log("blurImage", blurImage);
-    return res.status(200).json({
-      message: "Succesfully  Retrieved",
-    });
-  } catch (e) {
-    return res.status(400).json({ status: 400, message: e.message });
-  }
+  const image = await Jimp.read(" your image url here");
+  const blurImage = await image.blur(20).getBufferAsync(Jimp.MIME_JPEG);
+
+  AWS.config.update({
+    accessKeyId: process.env.key,
+    secretAccessKey: process.env.secret,
+    region: process.env.region,
+  });
+
+  const s3Bucket = new AWS.S3({
+    params: { Bucket: process.env.bucket_name },
+  });
+  const imageUpload = Buffer.from(blurImage, "base64");
+
+  const data = {
+    Key: "write a name for your new image here",
+    Body: imageUpload,
+    ContentType: "image/jpeg",
+    ACL: "public-read",
+    ContentEncoding: "base64",
+  };
+  s3Bucket.putObject(data, (err) => {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log("Successfully uploaded data to S3");
+    }
+  });
 };
